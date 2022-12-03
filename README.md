@@ -4,6 +4,16 @@
 
 I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and hit Cmd+Shift+B. This will trigger the [build task](./vscode/tasks.json) that runs a file watcher (`npm install --global onchange`) which will run the code whenever I save.
 
+## Personal stats
+
+```
+      -------Part 1--------   -------Part 2--------
+Day       Time  Rank  Score       Time  Rank  Score
+  3   00:01:04     4     97   00:03:56    25     76
+  2   00:04:49   325      0   00:07:27   231      0
+  1   00:01:00    44     57   00:01:30    26     75
+```
+
 ## Day 1
 
 ```ruby
