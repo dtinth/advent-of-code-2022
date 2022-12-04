@@ -126,3 +126,17 @@ items = input.each_slice(3).map { |l| l[0].chars & l[1].chars & l[2].chars }.fla
 priorities = items.map { |i| i.ord < 97 ? i.ord - 65 + 27 : i.ord - 97 + 1 }
 p priorities.sum
 ```
+
+## Day 4
+
+```ruby
+# Part 1
+lines = $stdin.readlines
+pairs = lines.map { |l| l.split(',').map { |r| r.split('-').map(&:to_i) } }
+p pairs.count { |a, b| a[0] <= b[0] && a[1] >= b[1] || b[0] <= a[0] && b[1] >= a[1] }
+
+# Part 2
+lines = $stdin.readlines
+pairs = lines.map { |l| l.split(',').map { |r| r.split('-').map(&:to_i) } }
+p pairs.count { |a, b| (a[0]..a[1]).to_a & (b[0]..b[1]).to_a != [] }
+```
