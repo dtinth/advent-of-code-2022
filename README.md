@@ -143,3 +143,17 @@ p pairs.count { |a, b| (a[0]..a[1]).to_a & (b[0]..b[1]).to_a != [] }
 ```
 
 <img width="923" alt="image" src="https://user-images.githubusercontent.com/193136/205475478-db94e4b0-e3d1-4857-8ade-d7066581aadf.png">
+
+## Day 5
+
+```ruby
+a, b = $stdin.read.split(/\n\s*\n/)
+lines = a.lines
+size = (lines.last.size + 2) / 4
+stacks = Array.new(size) { |i| lines.reverse.drop(1).map { |l| l[i * 4 + 1] }.join.strip.chars }
+moves = b.scan(/move (\d+) from (\d+) to (\d+)/).map { |m| [m[0].to_i, m[1].to_i - 1, m[2].to_i - 1] }
+moves.each do |n, from, to|
+  stacks[to] += stacks[from].pop(n).reverse # Remove `.reverse` for part 2
+end
+p stacks.map(&:last).join
+```
