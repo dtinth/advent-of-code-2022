@@ -2,7 +2,7 @@
 
 ## My workflow
 
-I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and hit Cmd+Shift+B. This will trigger the [build task](./vscode/tasks.json) that runs a file watcher (`npm install --global onchange`) which will run the code whenever I save.
+I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and hit Cmd+Shift+B. This will trigger the [build task](./.vscode/tasks.json) that runs a file watcher (`npm install --global onchange`) which will run the code whenever I save.
 
 ## Personal stats
 
