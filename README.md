@@ -175,3 +175,5 @@ end
 # Improved version
 p gets.chars.each_cons(4).find_index { |c| c.uniq.size == 4 } + 4
 ```
+
+<img width="924" alt="image" src="https://user-images.githubusercontent.com/193136/205834202-2903866b-d695-4e0a-852a-74fd417cee5b.png">
