@@ -9,6 +9,8 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+  6   00:00:39     1    100   00:01:08     1    100
+  5   00:06:59   123      0   00:07:28    77     24
   4   00:00:44     3     98   00:01:26     1    100
   3   00:01:04     4     97   00:03:56    25     76
   2   00:04:49   325      0   00:07:27   231      0
@@ -156,4 +158,20 @@ moves.each do |n, from, to|
   stacks[to] += stacks[from].pop(n).reverse # Remove `.reverse` for part 2
 end
 p stacks.map(&:last).join
+```
+
+## Day 6
+
+```ruby
+# Change all occuurances of `4` to `14` for part 2.
+data = $stdin.read
+4.upto(data.size) do |i|
+  if data[i - 4, 4].chars.uniq.size == 4
+    p i
+    break
+  end
+end
+
+# Improved version
+p gets.chars.each_cons(4).find_index { |c| c.uniq.size == 4 } + 4
 ```
