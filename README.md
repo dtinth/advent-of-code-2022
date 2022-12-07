@@ -218,7 +218,6 @@ end
 p s
 
 # Part 2
-s = 0
 sizes = {}
 @dirs.keys.map do |dir|
   files = @sizes.select { |k, v| k.to_s.start_with?(dir.to_s + '/') }
