@@ -227,4 +227,27 @@ end
 capacity = 70000000
 occupied = @sizes.values.sum
 pp sizes.values.filter { |v| occupied - v <= capacity - 30000000 }.min
+
+# Cleaned-up
+require 'pathname'
+@dir = Pathname.new('/')
+@dirs = { @dir => true }
+@sizes = {}
+$stdin.each_line do |line|
+  if line =~ /^\$ cd (.*)/
+    @dir = $1 == '/' ? Pathname.new('/') : @dir + $1
+  elsif line =~ /^dir (.*)/
+    @dirs[@dir + $1] = true
+  elsif line =~ /^(\d+) (.*)/
+    @sizes[@dir + $2] = $1.to_i
+  end
+end
+du = -> dir { @sizes.select { |k, v| k.to_s.start_with?(dir.to_s + '/') }.values.sum }
+
+# Part 1
+p @dirs.keys.map { |dir| du[dir] }.filter { |v| v <= 100000 }.sum
+
+# Part 2
+occupied = @sizes.values.sum
+p @dirs.keys.map { |dir| du[dir] }.filter { |v| occupied - v <= 70000000 - 30000000 }.min
 ```
