@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+  7   00:05:35     8     93   00:13:12    62     39
   6   00:00:39     1    100   00:01:08     1    100
   5   00:06:59   123      0   00:07:28    77     24
   4   00:00:44     3     98   00:01:26     1    100
@@ -177,3 +178,54 @@ p gets.chars.each_cons(4).find_index { |c| c.uniq.size == 4 } + 4
 ```
 
 <img width="924" alt="image" src="https://user-images.githubusercontent.com/193136/205834202-2903866b-d695-4e0a-852a-74fd417cee5b.png">
+
+## Day 7
+
+```ruby
+require 'pathname'
+@dir = Pathname.new('/')
+@dirs = {}
+@sizes = {}
+@dirs[@dir] = 0
+$stdin.readlines.each do |line|
+  things = line.split
+  if things[0] == '$'
+    if things[1] == 'cd'
+      if things[2] == '..'
+        @dir = @dir.parent
+      elsif things[2] == '/'
+        @dir = Pathname.new('/')
+      else
+        @dir = @dir + things[2]
+      end
+    end
+  elsif things[0] == 'dir'
+    @dirs[@dir + things[1]] = 0
+  else
+    size, name = things
+    size = size.to_i
+    @sizes[@dir + name] = size
+  end
+end
+
+# Part 1
+s = 0
+@dirs.keys.map do |dir|
+  files = @sizes.select { |k, v| k.to_s.start_with?(dir.to_s + '/') }
+  total = files.values.sum
+  s += total if total <= 100000
+end
+p s
+
+# Part 2
+s = 0
+sizes = {}
+@dirs.keys.map do |dir|
+  files = @sizes.select { |k, v| k.to_s.start_with?(dir.to_s + '/') }
+  total = files.values.sum
+  sizes[dir] = total
+end
+capacity = 70000000
+occupied = @sizes.values.sum
+pp sizes.values.filter { |v| occupied - v <= capacity - 30000000 }.min
+```
