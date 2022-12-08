@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+  8   00:05:52   219      0   00:11:31   154      0
   7   00:05:35     8     93   00:13:12    62     39
   6   00:00:39     1    100   00:01:08     1    100
   5   00:06:59   123      0   00:07:28    77     24
@@ -250,4 +251,112 @@ p @dirs.keys.map { |dir| du[dir] }.filter { |v| v <= 100000 }.sum
 # Part 2
 occupied = @sizes.values.sum
 p @dirs.keys.map { |dir| du[dir] }.filter { |v| occupied - v <= 70000000 - 30000000 }.min
+```
+
+## Day 8
+
+```ruby
+p map = $stdin.each_line.map { |line| line.chomp.chars.map(&:to_i) }
+height = map.size
+width = map[0].size
+height_of = -> i, j {
+  return -1 if i < 0 || i >= height || j < 0 || j >= width
+  map[i][j]
+}
+
+# Part 1
+is_visible = -> i, j {
+  h = height_of[i, j]
+  (0...i).all? { |k| height_of[k, j] < h } ||
+    (i + 1...height).all? { |k| height_of[k, j] < h } ||
+    (0...j).all? { |k| height_of[i, k] < h } ||
+    (j + 1...width).all? { |k| height_of[i, k] < h }
+}
+p (0...height).map { |i|
+  (0...width).map { |j|
+    is_visible[i, j] ? 1 : 0
+  }.sum
+}.sum
+
+# Part 2
+score = -> i, j {
+  h = height_of[i, j]
+  count = -> e {
+    c = 0
+    e.each do |x|
+      c += 1
+      break if x >= h
+    end
+    return c
+  }
+  a = count[(0...i).reverse_each.map { |k| height_of[k, j] }]
+  b = count[(i + 1...height).map { |k| height_of[k, j] }]
+  c = count[(0...j).reverse_each.map { |k| height_of[i, k] }]
+  d = count[(j + 1...width).map { |k| height_of[i, k] }]
+  a * b * c * d
+}
+p (0...height).map { |i|
+  (0...width).map { |j|
+    score[i, j]
+  }.max
+}.max
+
+# Cleaned-up
+p map = $stdin.each_line.map { |line| line.chomp.chars.map(&:to_i) }
+height = map.size
+width = map[0].size
+height_of = -> i, j { map[i][j] }
+
+# Part 1
+is_visible = -> i, j {
+  h = height_of[i, j]
+  (0...i).all? { |k| height_of[k, j] < h } ||
+    (i + 1...height).all? { |k| height_of[k, j] < h } ||
+    (0...j).all? { |k| height_of[i, k] < h } ||
+    (j + 1...width).all? { |k| height_of[i, k] < h }
+}
+p (0...height).map { |i| (0...width).count { |j| is_visible[i, j] } }.sum
+
+# Part 2
+score = -> i, j {
+  h = height_of[i, j]
+  count = -> e {
+    c = 0
+    e.each do |x|
+      c += 1
+      break if x >= h
+    end
+    return c
+  }
+  a = count[(0...i).reverse_each.map { |k| height_of[k, j] }]
+  b = count[(i + 1...height).map { |k| height_of[k, j] }]
+  c = count[(0...j).reverse_each.map { |k| height_of[i, k] }]
+  d = count[(j + 1...width).map { |k| height_of[i, k] }]
+  a * b * c * d
+}
+p (0...height).flat_map { |i| (0...width).map { |j| score[i, j] } }.max]
+
+# (DRY-ied up)
+p map = $stdin.each_line.map { |line| line.chomp.chars.map(&:to_i) }
+height = map.size
+width = map[0].size
+each_tree = (0...height).flat_map { |i| (0...width).map { [i, _1] } }
+
+left = -> ((i, j)) { (0...j).reverse_each.map { [i, _1] } }
+right = -> ((i, j)) { (j + 1...width).map { [i, _1] } }
+up = -> ((i, j)) { (0...i).reverse_each.map { [_1, j] } }
+down = -> ((i, j)) { (i + 1...height).map { [_1, j] } }
+directions = [left, right, up, down]
+
+height_of = -> ((i, j)) { map[i][j] }
+heights = -> directions { directions.map(&height_of) }
+rays = -> tree { directions.map { _1[tree] } }
+
+# Part 1
+is_visible = -> tree { -> ray { ray.map(&height_of).all? { _1 < height_of[tree] } } }
+p each_tree.count { |a| rays[a].map(&is_visible[a]).any? }
+
+# Part 2
+score = -> tree { -> ray { ray.map(&height_of).slice_after { _1 >= height_of[tree] }.first&.count || 0 } }
+p each_tree.map { |a| rays[a].map(&score[a]).inject(&:*) }.max
 ```
