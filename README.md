@@ -406,4 +406,22 @@ $stdin.each_line do |line|
 end
 p snake
 p tail.size
+
+# (Cleaned up)
+Knot = Struct.new(:position)
+rope = Array.new(2) { Knot.new([0, 0]) } # <-- (change 2 to 10 for part 2)
+trail = { [0, 0] => 1 }
+dirs = { 'R' => [1, 0], 'L' => [-1, 0], 'U' => [0, 1], 'D' => [0, -1] }
+move = -> ((x, y), (dx, dy)) { [x + dx, y + dy] }
+follow_1d = -> value, target { value + (value < target ? 1 : value > target ? -1 : 0) }
+follow_2d = -> ((x, y), (tx, ty)) { (x - tx).abs > 1 || (y - ty).abs > 1 ? [follow_1d[x, tx], follow_1d[y, ty]] : [x, y] }
+$stdin.each_line do |line|
+  dir, dist = line.chomp.split
+  dist.to_i.times do
+    rope.first.position = move[rope.first.position, dirs[dir]]
+    rope.each_cons(2) { |a, b| b.position = follow_2d[b.position, a.position] }
+    trail[rope.last.position] = 1
+  end
+end
+p trail.size
 ```
