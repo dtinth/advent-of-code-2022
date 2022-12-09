@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+  9   00:05:39    30     71   00:18:52   326      0
   8   00:05:52   219      0   00:11:31   154      0
   7   00:05:35     8     93   00:13:12    62     39
   6   00:00:39     1    100   00:01:08     1    100
