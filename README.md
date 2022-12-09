@@ -360,3 +360,49 @@ p each_tree.count { |a| rays[a].map(&is_visible[a]).any? }
 score = -> tree { -> ray { ray.map(&height_of).slice_after { _1 >= height_of[tree] }.first&.count || 0 } }
 p each_tree.map { |a| rays[a].map(&score[a]).inject(&:*) }.max
 ```
+
+## Day 9
+
+```ruby
+x, y = 0, 0
+snake = Array.new(1) { [0, 0] } # Change 1 to 9 for part 2
+tail = { [0, 0] => 1 }
+$stdin.each_line do |line|
+  dir, dist = line.chomp.split
+  dist.to_i.times do
+    case dir
+    when 'R'
+      x += 1
+    when 'L'
+      x -= 1
+    when 'U'
+      y += 1
+    when 'D'
+      y -= 1
+    end
+    cx, cy = x, y
+    snake.each do |s|
+      sx, sy = s
+      if (sx - cx).abs > 1 || (sy - cy).abs > 1
+        sx += sx < cx ? 1 : sx > cx ? -1 : 0
+        sy += sy < cy ? 1 : sy > cy ? -1 : 0
+      end
+      cx, cy = sx, sy
+      s[0] = sx
+      s[1] = sy
+    end
+    tail[snake[-1].dup] = 1
+    # # Debugging code
+    # (0..5).reverse_each do |i|
+    #   (0..5).each do |j|
+    #     idx = snake.index([j, i])
+    #     print [i, j] == [y, x] ? 'H' : (idx ? idx + 1 : '.')
+    #   end
+    #   puts
+    # end
+    # puts
+  end
+end
+p snake
+p tail.size
+```
