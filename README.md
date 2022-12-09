@@ -334,7 +334,7 @@ score = -> i, j {
   d = count[(j + 1...width).map { |k| height_of[i, k] }]
   a * b * c * d
 }
-p (0...height).flat_map { |i| (0...width).map { |j| score[i, j] } }.max]
+p (0...height).flat_map { |i| (0...width).map { |j| score[i, j] } }.max
 
 # (DRY-ied up)
 p map = $stdin.each_line.map { |line| line.chomp.chars.map(&:to_i) }
