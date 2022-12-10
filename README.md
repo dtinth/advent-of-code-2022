@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 10   00:08:29   618      0   00:13:22   150      0
   9   00:05:39    30     71   00:18:52   326      0
   8   00:05:52   219      0   00:11:31   154      0
   7   00:05:35     8     93   00:13:12    62     39
@@ -424,4 +425,50 @@ $stdin.each_line do |line|
   end
 end
 p trail.size
+```
+
+## Day 10
+
+```ruby
+# (Cleaned up code)
+Val = Struct.new(:cycle, :x)
+class Crt
+  attr_accessor :x
+  attr_reader :history
+  def initialize
+    @x = 1
+    @cx = 0
+    @output = []
+    @history = {}
+  end
+  def cycle
+    @history[@cx] = @x
+    if (@cx % 40 - @x).abs <= 1
+      @output << "#"
+    else
+      @output << "."
+    end
+    @cx += 1
+  end
+  def to_s
+    @output.each_slice(40).map { |s| s.join }.join("\n")
+  end
+end
+
+crt = Crt.new
+$stdin.each_line do |line|
+  if line =~ /addx (.+)/
+    crt.cycle
+    crt.cycle
+    crt.x += $1.to_i
+  elsif line =~ /noop/
+    crt.cycle
+  end
+end
+
+# Part 1
+p [20, 60, 100, 140, 180, 220].sum { |i| crt.history[i - 1] * i }
+
+# Part 2
+puts crt.to_s
 ```
