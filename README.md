@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 11   00:12:35    83     18   00:27:59   446      0
  10   00:08:29   618      0   00:13:22   150      0
   9   00:05:39    30     71   00:18:52   326      0
   8   00:05:52   219      0   00:11:31   154      0
@@ -471,4 +472,85 @@ p [20, 60, 100, 140, 180, 220].sum { |i| crt.history[i - 1] * i }
 
 # Part 2
 puts crt.to_s
+```
+
+## Day 11
+
+```ruby
+$lcm = 1
+$div_by = 3   # Change to 1 for part 2
+$rounds = 20  # Change to 10000 for part 2
+class Monkey
+  def initialize(items, operation, test, if_true, if_false)
+    @items = items
+    @operation = operation
+    @test = test
+    @if_true = if_true
+    @if_false = if_false
+    @times = 0
+    $lcm = $lcm.lcm(test)
+  end
+  attr_accessor :items
+  attr_reader :times
+  def inspect_items(monkeys)
+    @items.map! do |worry_level|
+      worry_level = @operation.call(worry_level) / $div_by
+      worry_level %= $lcm
+      if worry_level % @test == 0
+        monkeys[@if_true].items << worry_level
+      else
+        monkeys[@if_false].items << worry_level
+      end
+      @times += 1
+      nil
+    end
+    @items.compact!
+  end
+  def to_s
+    @items.join(", ")
+  end
+end
+
+# Monkey 0:
+#   Starting items: 79, 98
+#   Operation: new = old * 19
+#   Test: divisible by 23
+#     If true: throw to monkey 2
+#     If false: throw to monkey 3
+# Monkey 1:
+#   Starting items: 54, 65, 75, 74
+#   Operation: new = old + 6
+#   Test: divisible by 19
+#     If true: throw to monkey 2
+#     If false: throw to monkey 0
+# Monkey 2:
+#   Starting items: 79, 60, 97
+#   Operation: new = old * old
+#   Test: divisible by 13
+#     If true: throw to monkey 1
+#     If false: throw to monkey 3
+# Monkey 3:
+#   Starting items: 74
+#   Operation: new = old + 3
+#   Test: divisible by 17
+#     If true: throw to monkey 0
+#     If false: throw to monkey 1  
+monkeys = [
+  Monkey.new([79, 98], -> o { o * 19 }, 23, 2, 3),
+  Monkey.new([54, 65, 75, 74], -> o { o + 6 }, 19, 2, 0),
+  Monkey.new([79, 60, 97], -> o { o * o }, 13, 1, 3),
+  Monkey.new([74], -> o { o + 3 }, 17, 0, 1)
+]
+
+# (Paste the input in comments block and let Copilot generate the monkeys array)
+# monkeys = []
+
+$rounds.times do |i|
+  monkeys.each do |m|
+    m.inspect_items monkeys
+  end
+  p [i + 1, monkeys.map(&:times)]
+end
+
+puts monkeys.map(&:times).max(2).reduce(:*)
 ```
