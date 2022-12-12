@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 12   00:09:02   162      0   00:10:43   140      0
  11   00:12:35    83     18   00:27:59   446      0
  10   00:08:29   618      0   00:13:22   150      0
   9   00:05:39    30     71   00:18:52   326      0
@@ -553,4 +554,54 @@ $rounds.times do |i|
 end
 
 puts monkeys.map(&:times).max(2).reduce(:*)
+```
+
+## Day 12
+
+```ruby
+map = $stdin.read.split.map(&:chars)
+pos_list = (0...map.size).flat_map { |i| (0...map[i].size).map { |j| [i, j] } }
+to_elevation = -> c {
+  c = 'a' if c == 'S'
+  c = 'z' if c == 'E'
+  c.ord - "a".ord
+}
+start_pos_list = pos_list.select { |i, j| map[i][j] == "S" }
+next_pos_list = -> i, j {
+  [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]].select do |i2, j2|
+    i2 >= 0 && i2 < map.size && j2 >= 0 && j2 < map[i].size && to_elevation[map[i2][j2]] <= to_elevation[map[i][j]] + 1
+  end
+}
+
+# Comment for part 1
+start_pos_list += pos_list.select { |i, j| map[i][j] == "a" }
+
+end_pos = pos_list.find { |i, j| map[i][j] == "E" }
+State = Struct.new(:pos, :steps)
+choices = []
+start_pos_list.each do |start_pos|
+  queue = [State.new(start_pos, [start_pos])]
+  visited = { start_pos => true }
+  loop do
+    state = queue.shift
+    break if state.nil?
+    pos = state.pos
+    steps = state.steps
+    next_pos_list[*pos].each do |pos2|
+      if pos2 == end_pos
+        choices << state.steps.size
+        print '.'
+        break
+      end
+      if !visited[pos2]
+        visited[pos2] = true
+        next_step = steps + [pos2]
+        next_state = State.new(pos2, next_step)
+        queue << next_state
+      end
+    end
+  end
+end
+puts
+p choices.min
 ```
