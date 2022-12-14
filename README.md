@@ -9,6 +9,8 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 14   00:08:16    33     68   00:12:54    70     31
+ 13   00:14:20   415      0   00:16:36   207      0
  12   00:09:02   162      0   00:10:43   140      0
  11   00:12:35    83     18   00:27:59   446      0
  10   00:08:29   618      0   00:13:22   150      0
@@ -604,4 +606,114 @@ start_pos_list.each do |start_pos|
 end
 puts
 p choices.min
+```
+
+## Day 13
+
+```ruby
+pairs = $stdin.read.split("\n\n").map { |x| x.lines.map { |y| eval y } }
+compare = -> x, y {
+  if x.is_a?(Array) && y.is_a?(Array)
+    max_index = [x.size, y.size].max
+    max_index.times do |i|
+      a, b = x[i], y[i]
+      return -1 if a.nil?
+      return 1 if b.nil?
+      c = compare[a, b]
+      return c if c != 0
+    end
+    return 0
+  elsif x.is_a?(Array) && !y.is_a?(Array)
+    compare[x, [y]]
+  elsif !x.is_a?(Array) && y.is_a?(Array)
+    compare[[x], y]
+  else
+    x <=> y
+  end
+}
+
+# Part 1
+i = 0
+sum = 0
+pairs.each do |a, b|
+  i += 1
+  p [i, compare[a, b], a, b]
+  sum += i if compare[a, b] < 0
+end
+puts "Part 1: #{sum}"
+
+# Part 2
+k = pairs.flatten(1)
+k << [[2]]
+k << [[6]]
+cmp = k.sort{|a,b|compare[a,b]}
+puts "Part 2: #{(cmp.index([[2]]) + 1) * (cmp.index([[6]]) + 1)}"
+```
+
+## Day 14
+
+```ruby
+paths = $stdin.readlines.map { |x| x.strip.split(' -> ').map { |y| y.split(',').map(&:to_i) } }
+map = Hash.new('.')
+paths.each do |path|
+  path.each_cons(2) do |a, b|
+    if a[0] == b[0]
+      min, max = [a[1], b[1]].minmax
+      (min..max).each do |y|
+        map[[a[0], y]] = '#'
+      end
+    else
+      min, max = [a[0], b[0]].minmax
+      (min..max).each do |x|
+        map[[x, a[1]]] = '#'
+      end
+    end
+  end
+end
+floor = nil                          # Part 1
+floor = map.keys.map(&:last).max + 2 # Part 2
+map2 = -> c {
+  x, y = c
+  if y == floor
+    '#'
+  else
+    map[[x, y]]
+  end
+}
+sand = -> {
+  x, y = 500, 0
+  loop do
+    if map2[[x, y + 1]] == '.'
+      x, y = x, y + 1
+    elsif map2[[x - 1, y + 1]] == '.'
+      x, y = x - 1, y + 1
+    elsif map2[[x + 1, y + 1]] == '.'
+      x, y = x + 1, y + 1
+    else
+      break
+    end
+  end
+  map[[x, y]] = 'o'
+}
+draw = -> {
+  (0..map.keys.map(&:last).max + 2).each do |y|
+    (map.keys.map(&:first).min .. map.keys.map(&:first).max).each do |x|
+      print map2[[x, y]]
+    end
+    puts
+  end
+}
+
+t = 0
+loop do
+  sand[]
+  t += 1
+  # draw[]
+  p t
+  break if map[[500, 0]] == 'o'
+end
+
+# In part 1, the program will go into an infinite loop.
+# In part 2, the program will halt once exit condition is reached.
+# Output is the last number printed.
 ```
