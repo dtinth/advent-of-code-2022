@@ -717,3 +717,94 @@ end
 # In part 2, the program will halt once exit condition is reached.
 # Output is the last number printed.
 ```
+
+## Day 15
+
+```ruby
+# Part 1
+Report = Struct.new(:pos, :closest_beacon)
+beacon_pos = {}
+data = $stdin.readlines.map { |l|
+  x1, y1, x2, y2 = l.scan(/(\d+)/).map(&:first).map(&:to_i)
+  beacon_pos[[x2, y2]] = true
+  Report.new([x1, y1], [x2, y2])
+}
+manhattan = -> (a, b) { (a[0] - b[0]).abs + (a[1] - b[1]).abs }
+blast = -> (sensor, beacon, y) {
+  distance = manhattan[sensor, beacon]
+  y_diff = (sensor[1] - y).abs
+  width = distance - y_diff
+  return nil if width < 0
+  (sensor[0] - width)..(sensor[0] + width)
+}
+
+y_search = 10
+ranges = data.map { |r| blast[r.pos, r.closest_beacon, y_search] }.compact
+p ranges
+beacon_xs = beacon_pos.select { |k, v| k[1] == y_search }.keys.map(&:first)
+p (ranges.map(&:to_a).flatten.uniq - beacon_xs).size
+```
+
+```ruby
+# Part 2
+Report = Struct.new(:pos, :closest_beacon)
+beacon_pos = {}
+sensor_pos = {}
+beacon_on_y = {}
+data = $stdin.readlines.map { |l|
+  x1, y1, x2, y2 = l.scan(/(-?\d+)/).map(&:first).map(&:to_i)
+  beacon_pos[[x2, y2]] = true
+  sensor_pos[[x1, y1]] = true
+  beacon_on_y[y2] ||= {}
+  beacon_on_y[y2][x2] = true
+  Report.new([x1, y1], [x2, y2])
+}
+manhattan = -> (a, b) { (a[0] - b[0]).abs + (a[1] - b[1]).abs }
+blast = -> (sensor, beacon, y) {
+  distance = manhattan[sensor, beacon]
+  y_diff = (sensor[1] - y).abs
+  width = distance - y_diff
+  return nil if width < 0
+  (sensor[0] - width)..(sensor[0] + width)
+}
+scan_range = -> (rs, xx, min = rs.map(&:begin).min, max = rs.map(&:begin).max) {
+  events = []
+  rs.each do |r|
+    events << [r.begin, 1]
+    events << [r.end + 1, -1]
+  end
+  events << [min, 0]
+  events << [max, 0]
+  events.sort_by!(&:first)
+  last_x = 0
+  count = 0
+  active = false
+  in_range = 0
+  events.each do |x, delta|
+    if active && in_range > 0
+      count += x - last_x
+    end
+    in_range += delta
+    if x == min
+      active = true
+    end
+    if x == max
+      break
+    end
+    last_x = x
+  end
+  count
+}
+
+(0..4000000).reverse_each do |y_search|
+  ranges = data.map { |r| blast[r.pos, r.closest_beacon, y_search] }.compact + (beacon_on_y[y_search] || {}).keys.map { |x| x..x }
+  scanned_count = scan_range[ranges, (beacon_on_y[y_search] || {}).keys, 0, 4000000]
+  p [y_search, scanned_count]
+  if scanned_count < 4000000
+    xs = (0..4000000).to_a - ranges.map(&:to_a).flatten.uniq
+    p xs[0] * 4000000 + y_search
+    break
+  end
+  # puts (0..20).map { |x| sensor_pos[[x, y_search]] ? 'S' : beacon_pos[[x, y_search]] ? 'B' : xs.include?(x) ? '.' : '#' }.join('')
+end
+```
