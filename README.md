@@ -808,3 +808,199 @@ scan_range = -> (rs, xx, min = rs.map(&:begin).min, max = rs.map(&:begin).max) {
   # puts (0..20).map { |x| sensor_pos[[x, y_search]] ? 'S' : beacon_pos[[x, y_search]] ? 'B' : xs.include?(x) ? '.' : '#' }.join('')
 end
 ```
+
+## Day 16
+
+<details><summary>Scrappy part 1</summary>
+
+```ruby
+# Part 1
+Valve = Struct.new(:name, :flow_rate, :tunnels)
+valves = $stdin.read.scan(/Valve (\w+) has flow rate=(\d+); tunnels? leads? to valves? (.*)/).map do |name, flow_rate, tunnels|
+  Valve.new(name, flow_rate.to_i, tunnels.split(', '))
+end
+$valve_map = valves.map { |v| [v.name, v] }.to_h
+
+# Find shortest path from a given valve
+shortest_path = -> from {
+  visited = {}
+  queue = [[from, 0]]
+  while !queue.empty?
+    current, distance = queue.shift
+    next if visited[current]
+    visited[current] = distance
+    $valve_map[current].tunnels.each do |tunnel|
+      queue << [tunnel, distance + 1]
+    end
+  end
+  visited
+}
+$shortest_paths = valves.map { |v| [v.name, shortest_path[v.name]] }.to_h
+$valves_worth_opening = valves.select { |v| v.flow_rate > 0 }
+
+fridge = []
+State = Struct.new(:time, :opened, :current, :cost, :released) do
+  def next_states
+    out = []
+    # Opportunity cost = unopened valves
+    release = opened.sum { |name, opened| opened ? $valve_map[name].flow_rate : 0 }
+    opportunity_cost = $valves_worth_opening.filter { |v| !opened[v.name] }.sum(&:flow_rate)
+    # Do nothing
+    time_remaining = 30 - time
+    if time_remaining > 0
+      out << State.new(
+        time + time_remaining,
+        opened,
+        current,
+        cost + opportunity_cost * time_remaining,
+        released + release * time_remaining
+      )
+    end
+    # Open a valve
+    $valves_worth_opening.each do |valve|
+      next if opened[valve.name]
+      elapsed = $shortest_paths[current][valve.name] + 1
+      target_time = time + elapsed
+      next if target_time > 30
+      out << State.new(
+        target_time,
+        opened.merge(valve.name => true),
+        valve.name,
+        cost + opportunity_cost * elapsed,
+        released + release * elapsed
+      )
+    end
+    out
+  end
+  def key
+    @key ||= [time, opened, current]
+  end
+end
+fridge << State.new(0, {}, 'AA', 0, 0)
+visited = {}
+last_time = 0
+while !fridge.empty?
+  fridge.sort_by! { |s| s.cost }
+  state = fridge.shift
+  key = state.key
+  next if visited[key]
+  visited[key] = true
+  if Time.now.to_f - last_time > 1
+    p [state.time, state.released, state.cost, state]
+    last_time = Time.now.to_f
+  end
+  if state.time == 30
+    puts state.released
+    exit
+  end
+  fridge += state.next_states.reject { |s| visited[s.key] }
+end
+```
+
+</details>
+
+```ruby
+Valve = Struct.new(:name, :flow_rate, :tunnels)
+valves = $stdin.read.scan(/Valve (\w+) has flow rate=(\d+); tunnels? leads? to valves? (.*)/).map do |name, flow_rate, tunnels|
+  Valve.new(name, flow_rate.to_i, tunnels.split(', '))
+end
+$valve_map = valves.map { |v| [v.name, v] }.to_h
+
+# Find shortest path from a given valve
+shortest_path = -> from {
+  visited = {}
+  queue = [[from, []]]
+  while !queue.empty?
+    current, path = queue.shift
+    next if visited[current]
+    visited[current] = path
+    $valve_map[current].tunnels.each do |tunnel|
+      queue << [tunnel, path + [tunnel]]
+    end
+  end
+  visited
+}
+$shortest_paths = valves.map { |v| [v.name, shortest_path[v.name]] }.to_h
+$valves_worth_opening = valves.select { |v| v.flow_rate > 0 }
+
+Actor = Struct.new(:pos, :time, :parent) do
+  def path
+    "#{parent ? parent.path + ' => ' : ''}#{pos}@#{time - 4}"
+  end
+  def inspect
+    "Actor(#{path})"
+  end
+  def to_s
+    inspect
+  end
+end
+State = Struct.new(:opened, :actors, :open_times) do
+  def key
+    @key ||= [opened, actors.map(&:pos)]
+  end
+  def value
+    open_times.sum { |v, t| $valve_map[v].flow_rate * (30 - t) }
+  end
+  def unopened_valves
+    @unopened_valves ||= $valves_worth_opening.reject { |v| opened[v.name] }
+  end
+  def next_states
+    out = []
+    unopened_valves.each do |v|
+      # Select which actor opens that valve
+      actors.each_with_index do |actor, i|
+        next_time = actor.time + $shortest_paths[actor.pos][v.name].length + 1
+        next if next_time >= 30
+        next_actors = actors.dup
+        next_actors[i] = Actor.new(v.name, next_time, actor)
+        out << State.new(
+          opened.merge(v.name => true),
+          next_actors,
+          open_times.merge(v.name => next_time)
+        )
+      end
+    end
+    out
+  end
+  def inspect
+    "State([#{opened.keys.sort.join(', ')}], [#{actors.join(', ')}])"
+  end
+  def to_s
+    inspect
+  end
+end
+
+# For part 1
+initial_state = State.new({}, [Actor.new('AA', 0, nil)], {})
+
+# For part 2
+initial_state = State.new({}, [Actor.new('AA', 4, nil), Actor.new('AA', 4, nil)], {})
+
+evaluated = 0
+best_value = {}
+queue = {}
+best_value[initial_state.key] = initial_state.value
+queue[initial_state.key] = [initial_state]
+last_time = 0
+start_time = Time.now.to_f
+while !queue.empty?
+  key = queue.each_key.first
+  states = queue.delete(key)
+  states.each do |state|
+    evaluated += 1
+    if Time.now.to_f > last_time + 1
+      p [evaluated, queue.size, best_value.size, state, state.value]
+      last_time = Time.now.to_f
+    end
+    state.next_states.each do |s|
+      if !best_value[s.key] || s.value > best_value[s.key]
+        best_value[s.key] = s.value
+        queue[s.key] = [s]
+      end
+    end
+  end
+end
+
+p Time.now.to_f - start_time
+p best_value.values.max
+```
