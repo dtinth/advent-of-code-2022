@@ -9,6 +9,9 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 17   00:32:49   283      0   00:51:56   244      0
+ 16   01:00:28   661      0   03:11:54  1150      0
+ 15   00:11:17   126      0   00:57:45  1126      0
  14   00:08:16    33     68   00:12:54    70     31
  13   00:14:20   415      0   00:16:36   207      0
  12   00:09:02   162      0   00:10:43   140      0
@@ -1003,4 +1006,145 @@ end
 
 p Time.now.to_f - start_time
 p best_value.values.max
+```
+
+## Day 17
+
+```ruby
+rock_shapes = [
+  ['####'],
+  ['.#.', '###', '.#.'],
+  ['..#', '..#', '###'],
+  ['#', '#', '#', '#'],
+  ['##', '##'],
+]
+$jet_patterns = gets.strip.chars
+$jet = 0
+
+class Board
+  def initialize
+    @rocks = []
+    @occupy = {}
+    @height = 0
+  end
+  def available((i, j))
+    return false if i < 0
+    return false if j >= 7 || j < 0
+    return !@occupy[[i, j]]
+  end
+  def add(rock_type, dbg = false)
+    x = 2
+    y = @height + 3
+    occ = rock_type.pos(y, x)
+    if dbg
+      p [@height, y, x, occ]
+      visualize(occ)
+      sleep 0.1
+    end
+    loop do
+      jet = $jet_patterns[$jet % $jet_patterns.size]
+      $jet += 1
+      dir = jet == '>' ? 1 : -1
+      propose = rock_type.pos(y, x + dir)
+      if can_place?(propose)
+        occ = propose
+        x += dir
+        if dbg
+          visualize(occ)
+          sleep 0.1
+        end
+      end
+      propose = rock_type.pos(y - 1, x)
+      if can_place?(propose)
+        occ = propose
+        y -= 1
+        if dbg
+          visualize(occ)
+          sleep 0.1
+        end
+      else
+        break
+      end
+    end
+    occ.keys.each do |c|
+      @occupy[c] = '#'
+      @height = c[0] + 1 if c[0] + 1 > @height
+    end
+    if dbg
+      visualize
+      p [occ.keys, @height]
+    end
+  end
+  def can_place?(occ)
+    occ.keys.all? { |c| available(c) }
+  end
+  def visualize(add = {})
+    occupy = @occupy.merge(add)
+    (0..@height + 10).reverse_each do |i|
+      puts (0...7).map { |j| occupy[[i, j]] || '.' }.join
+    end
+    puts
+  end
+  attr_reader :height
+end
+
+class RockType
+  attr_reader :occupy
+  def initialize(x)
+    @height = x.length
+    @width = x[0].length
+    @occupy = {}
+    x.each_with_index do |s, i|
+      s.chars.each_with_index do |c, j|
+        @occupy[[i, j]] = 1 if c == '#'
+      end
+    end
+  end
+  def pos(i0, j0)
+    out = {}
+    @occupy.each do |(i, j), _|
+      out[[i0 + @height - 1 - i, j0 + j]] = '@'
+    end
+    out
+  end
+end
+
+rocks = rock_shapes.map { |x| RockType.new(x) }
+
+# Part 1 - Straightforward simulation
+board = Board.new
+2022.times do |i|
+  board.add rocks[i % rocks.size] #, i == 5
+  # board.visualize
+end
+p board.height
+
+# Part 2 - Simulate 50000 iterations, keeping track of height change after placing block,
+# brute-force to detect a cycle, and extrapolate to get the result.
+board = Board.new
+$jet = 0
+height_changes = []
+last_height = 0
+50000.times do |i|
+  board.add rocks[i % rocks.size]
+  height_changes << board.height - last_height
+  last_height = board.height
+end
+
+found_cycle_length = ($jet_patterns.length..height_changes.length).find { |x|
+  a = height_changes.last(x)
+  b = height_changes.last(x * 2).first(x)
+  c = height_changes.last(x * 3).first(x)
+  a == b && b == c
+}
+
+blocks_placed = height_changes.size
+height_so_far = height_changes.sum
+cycle = height_changes.last(found_cycle_length)
+height_increase_per_cycle = cycle.sum
+blocks_to_place = 1000000000000 - blocks_placed
+cycles_to_place, blocks_to_place = blocks_to_place.divmod(found_cycle_length)
+height_so_far += cycles_to_place * height_increase_per_cycle
+height_so_far += cycle.take(blocks_to_place).sum
+p height_so_far
 ```
