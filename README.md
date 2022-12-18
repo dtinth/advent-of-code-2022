@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 18   00:09:57  1299      0   00:20:48   484      0
  17   00:32:49   283      0   00:51:56   244      0
  16   01:00:28   661      0   03:11:54  1150      0
  15   00:11:17   126      0   00:57:45  1126      0
@@ -1147,4 +1148,52 @@ cycles_to_place, blocks_to_place = blocks_to_place.divmod(found_cycle_length)
 height_so_far += cycles_to_place * height_increase_per_cycle
 height_so_far += cycle.take(blocks_to_place).sum
 p height_so_far
+```
+
+## Day 18
+
+```ruby
+voxels = $stdin.readlines.map { |x| x.split(',').map(&:to_i) }
+voxels_h = voxels.map { |v| [v, true] }.to_h
+
+# Part 1
+group_xy = voxels.group_by { |x, y, z| [x, y] }.map { |k, v| [k, v.map { |x| x[2] } ] }.to_h
+group_yz = voxels.group_by { |x, y, z| [y, z] }.map { |k, v| [k, v.map { |x| x[0] } ] }.to_h
+group_xz = voxels.group_by { |x, y, z| [x, z] }.map { |k, v| [k, v.map { |x| x[1] } ] }.to_h
+surf = -> groups {
+  groups.sum { |k, vs|
+    vs = vs.sort
+    vs.flat_map { |x| [x, x+1] }.group_by {|v|v}.select{|k,v|v.length == 1}.count
+  }
+}
+p surf[group_xy] + surf[group_yz] + surf[group_xz]
+
+# Part 2
+x_range = voxels.map { |x, y, z| x }.minmax
+y_range = voxels.map { |x, y, z| y }.minmax
+z_range = voxels.map { |x, y, z| z }.minmax
+queue = [[x_range[0] - 2, y_range[0] - 2, z_range[0] - 2]]
+visited = {}
+surf = 0
+while !queue.empty?
+  x, y, z = queue.shift
+  point = [x, y, z]
+  next if visited[point]
+  visited[point] = true
+  unless voxels_h[point]
+    inject = -> cx, cy, cz {
+      queue << [cx, cy, cz] if !visited[[cx, cy, cz]] && cx >= x_range[0] - 2 && cx <= x_range[1] + 2 && cy >= y_range[0] - 2 && cy <= y_range[1] + 2 && cz >= z_range[0] - 2 && cz <= z_range[1] + 2
+      if voxels_h[[cx, cy, cz]]
+        surf += 1
+      end
+    }
+    inject[x, y, z - 1]
+    inject[x, y, z + 1]
+    inject[x, y - 1, z]
+    inject[x, y + 1, z]
+    inject[x - 1, y, z]
+    inject[x + 1, y, z]
+  end
+end
+p surf
 ```
