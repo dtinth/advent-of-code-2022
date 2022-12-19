@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 19   10:02:50  4817      0   10:15:00  3913      0
  18   00:09:57  1299      0   00:20:48   484      0
  17   00:32:49   283      0   00:51:56   244      0
  16   01:00:28   661      0   03:11:54  1150      0
@@ -1196,4 +1197,85 @@ while !queue.empty?
   end
 end
 p surf
+```
+
+## Day 19
+
+```ruby
+class Blueprint < Struct.new(:id, :ore_robot_cost, :clay_robot_cost, :obsidian_robot_cost_ore, :obsidian_robot_cost_clay, :geode_robot_cost_ore, :geode_robot_cost_obsidian)
+  def quality_level
+    id * geodes_opened(24)
+  end
+  def geodes_opened(max_time)
+    states = [State.new(self, 0,  0, 0, 0, 0,  1, 0, 0, 0)]
+    max_time.times do |i|
+      states = states.flat_map(&:moves).sort_by { |s| s.fitness }.reverse.take(20000)
+      # p [i, states.length, states.map(&:geode).max]
+    end
+    states.map(&:geode).max
+  end
+end
+class State < Struct.new(:blueprint, :time, :ore, :clay, :obsidian, :geode, :ore_robots, :clay_robots, :obsidian_robots, :geode_robots)
+  def fitness
+    [geode, heuristic]
+  end
+  def heuristic
+    [geode_robots, obsidian_robots, clay_robots, ore_robots]
+  end
+  def moves
+    out = []
+
+    # Do nothing
+    base = tick
+    out << base
+
+    # Build ore robot
+    if ore >= blueprint.ore_robot_cost
+      next_state = base.dup
+      next_state.ore -= blueprint.ore_robot_cost
+      next_state.ore_robots += 1
+      out << next_state
+    end
+
+    # Build clay robot
+    if ore >= blueprint.clay_robot_cost
+      next_state = base.dup
+      next_state.ore -= blueprint.clay_robot_cost
+      next_state.clay_robots += 1
+      out << next_state
+    end
+
+    # Build obsidian robot
+    if ore >= blueprint.obsidian_robot_cost_ore && clay >= blueprint.obsidian_robot_cost_clay
+      next_state = base.dup
+      next_state.ore -= blueprint.obsidian_robot_cost_ore
+      next_state.clay -= blueprint.obsidian_robot_cost_clay
+      next_state.obsidian_robots += 1
+      out << next_state
+    end
+
+    # Build geode robot
+    if ore >= blueprint.geode_robot_cost_ore && obsidian >= blueprint.geode_robot_cost_obsidian
+      next_state = base.dup
+      next_state.ore -= blueprint.geode_robot_cost_ore
+      next_state.obsidian -= blueprint.geode_robot_cost_obsidian
+      next_state.geode_robots += 1
+      out << next_state
+    end
+    out
+  end
+  def tick
+    State.new(blueprint, time + 1, ore + ore_robots, clay + clay_robots, obsidian + obsidian_robots, geode + geode_robots, ore_robots, clay_robots, obsidian_robots, geode_robots)
+  end
+end
+
+input = $stdin.read.scan(/\d+/).each_slice(7).map { |c|
+  Blueprint.new(*c.map(&:to_i))
+}
+p input.map(&:quality_level).sum
+
+a = input[0].geodes_opened(32)
+b = input[1].geodes_opened(32)
+c = input[2].geodes_opened(32)
+p a * b * c
 ```
