@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 20   00:21:52   232      0   00:25:10   162      0
  19   10:02:50  4817      0   10:15:00  3913      0
  18   00:09:57  1299      0   00:20:48   484      0
  17   00:32:49   283      0   00:51:56   244      0
@@ -1278,4 +1279,49 @@ a = input[0].geodes_opened(32)
 b = input[1].geodes_opened(32)
 c = input[2].geodes_opened(32)
 p a * b * c
+```
+
+## Day 20
+
+```ruby
+# Part 1
+numbers = $stdin.read.lines.map(&:to_i)
+index = -> i {
+  x = i % numbers.length
+  x < 0 ? x + numbers.length : x
+}
+data = numbers.each_with_index.map { |n, i| [n, i] }
+data.dup.each do |n, i|
+  swap_times = n.abs
+  current_index = data.find_index { |_, j| j == i }
+  swap_times.times do |j|
+    next_index = index[n > 0 ? current_index + 1 : current_index - 1]
+    data[current_index], data[next_index] = data[next_index], data[current_index]
+    current_index = next_index
+  end
+end
+index_zero = data.find_index { |i, _| i == 0 }
+p data[index[index_zero + 1000]][0] + data[index[index_zero + 2000]][0] + data[index[index_zero + 3000]][0]
+```
+
+```ruby
+# Part 2
+numbers = $stdin.read.lines.map(&:to_i).map { |n| n * 811589153 }
+index = -> i {
+  x = i % numbers.length
+  x < 0 ? x + numbers.length : x
+}
+data = numbers.each_with_index.map { |n, i| [n, i] }
+(data.dup * 10).each do |n, i|
+  swap_times = n.abs % (data.length - 1)
+  current_index = data.find_index { |_, j| j == i }
+  swap_times.times do |j|
+    next_index = index[n > 0 ? current_index + 1 : current_index - 1]
+    data[current_index], data[next_index] = data[next_index], data[current_index]
+    current_index = next_index
+  end
+end
+p data
+index_zero = data.find_index { |i, _| i == 0 }
+p data[index[index_zero + 1000]][0] + data[index[index_zero + 2000]][0] + data[index[index_zero + 3000]][0]
 ```
