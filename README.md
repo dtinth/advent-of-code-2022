@@ -1283,6 +1283,8 @@ p a * b * c
 
 ## Day 20
 
+<details><summary>Scrappy version</summary>
+
 ```ruby
 # Part 1
 numbers = $stdin.read.lines.map(&:to_i)
@@ -1324,4 +1326,22 @@ end
 p data
 index_zero = data.find_index { |i, _| i == 0 }
 p data[index[index_zero + 1000]][0] + data[index[index_zero + 2000]][0] + data[index[index_zero + 3000]][0]
+```
+
+</details>
+
+After I learn that Ruby can do circular arrays:
+
+```ruby
+$decryption_key = 1;         $times_to_repeat = 1    # Part 1
+$decryption_key = 811589153; $times_to_repeat = 10   # Part 2
+data = $stdin.read.lines.map(&:to_i).each_with_index.map { |n, i| [n * $decryption_key, i] }
+(data.dup * $times_to_repeat).each do |n, i|
+  data.rotate! data.find_index { |_, j| j == i }
+  value, _ = data.shift
+  data.rotate! value
+  data.unshift [value, i]
+end
+data.rotate! data.find_index { |n, i| n == 0 }
+p data[1000 % data.length][0] + data[2000 % data.length][0] + data[3000 % data.length][0]
 ```
