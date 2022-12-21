@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 21   00:03:40    58     43   00:46:38  1306      0
  20   00:21:52   232      0   00:25:10   162      0
  19   10:02:50  4817      0   10:15:00  3913      0
  18   00:09:57  1299      0   00:20:48   484      0
@@ -1344,4 +1345,70 @@ data = $stdin.read.lines.map(&:to_i).each_with_index.map { |n, i| [n * $decrypti
 end
 data.rotate! data.find_index { |n, i| n == 0 }
 p data[1000 % data.length][0] + data[2000 % data.length][0] + data[3000 % data.length][0]
+```
+
+## Day 21
+
+```ruby
+# Part 1
+lines = $stdin.readlines
+all = []
+lines.each do |l|
+  if l =~ /(\w+): (.+)/
+    name = $1
+    code = $2
+    all << "x[:#{name}] = -> { c[:#{name}] ||= #{code.gsub(/([a-z]+)/) { "x[:#{$1}][]" }} }"
+  end
+end
+x = {}
+c = {}
+puts all
+eval all.join("\n")
+p x[:root][]
+```
+
+```ruby
+# Part 2
+# Parse inputs
+lines = $stdin.readlines
+codes = {}
+lines.each do |l|
+  if l =~ /(\w+): (.+)/
+    name = $1
+    code = $2
+    code = code.sub('+') { '==' } if name == 'root'
+    code = code.sub('humn') { "$YOU" }
+    codes[name] = code
+  end
+end
+
+# Inline all monkeys
+code = codes['root']
+last_code = code
+loop do
+  code = code.gsub(/([a-z]+)/) {
+    subcode = codes[$1]
+    if subcode =~ /(\d+)/
+      $1
+    else
+      "(#{subcode})"
+    end
+  }
+  p code
+  break if last_code == code
+  last_code = code
+end
+
+# Binary search to find the number
+code = code.gsub('==', '-')
+$YOU = 3220000000000
+found = (0..9999999999999).bsearch do |i|
+  $YOU = i
+  result = eval code
+  p [i, result]
+  result <= 0
+end
+p found
+$YOU = found
+p eval code
 ```
