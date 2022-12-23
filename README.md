@@ -9,6 +9,7 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 23   00:16:47    44     57   00:18:46    35     66
  22   00:12:11    16     85   01:05:35    50     51
  21   00:03:40    58     43   00:46:38  1306      0
  20   00:21:52   232      0   00:25:10   162      0
@@ -1693,4 +1694,308 @@ facing_score = case facing
 row = place[1] + 1
 col = place[0] + 1
 p row * 1000 + col * 4 + facing_score
+```
+
+```ruby
+# Part 2, generic solution
+require 'matrix'
+sin = -> deg { Math.sin(deg * Math::PI / 180).round }
+cos = -> deg { Math.cos(deg * Math::PI / 180).round }
+$rotate_x_cw = Matrix[
+  [1, 0, 0],
+  [0, cos[90], sin[90]],
+  [0, -sin[90], cos[90]]
+]
+$rotate_x_ccw = Matrix[
+  [1, 0, 0],
+  [0, cos[-90], sin[-90]],
+  [0, -sin[-90], cos[-90]]
+]
+$rotate_y_cw = Matrix[
+  [cos[90], 0, -sin[90]],
+  [0, 1, 0],
+  [sin[90], 0, cos[90]]
+]
+$rotate_y_ccw = Matrix[
+  [cos[-90], 0, -sin[-90]],
+  [0, 1, 0],
+  [sin[-90], 0, cos[-90]]
+]
+CubeFace = Struct.new(:transform, :name) do
+  def outward
+    transform * Vector[0, 0, 1]
+  end
+  def rightward
+    transform * Vector[1, 0, 0]
+  end
+  def downward
+    transform * Vector[0, -1, 0]
+  end
+  def up
+    rotate($rotate_x_cw, 'up')
+  end
+  def down
+    rotate($rotate_x_ccw, 'down')
+  end
+  def left
+    rotate($rotate_y_cw, 'left')
+  end
+  def right
+    rotate($rotate_y_ccw, 'right')
+  end
+  def rotate(rotation, add)
+    CubeFace.new(transform * rotation, name + '.' + add)
+  end
+  def inspect
+    "CubeFace #{outward} #{rightward} #{downward} (#{name})"
+  end
+end
+CubePoint = Struct.new(:size, :face, :x, :y) do
+  def key
+    max = (size - 1) * 2
+    face.outward * (size + 1) * 2 + face.rightward * (x * 2 - max / 2) + face.downward * (y * 2 - max / 2)
+  end
+  def travel(dx, dy)
+    next_x, next_y = x + dx, y + dy
+    if 0 <= next_x && next_x < size && 0 <= next_y && next_y < size
+      CubePoint.new(size, face, next_x, next_y)
+    else
+      next_x, next_y = next_x % size, next_y % size
+      next_face = case [dx, dy]
+                  when [1, 0] then face.right
+                  when [-1, 0] then face.left
+                  when [0, 1] then face.down
+                  when [0, -1] then face.up
+                  end
+      CubePoint.new(size, next_face, next_x, next_y)
+    end
+  end
+end
+
+map = {}
+lines = $stdin.readlines
+queue = []
+
+# Find the cube size and create the cube
+n_points = lines.take_while { |l| !l.strip.empty? }.join.scan(/\S/).size
+cube_size = ((n_points / 6) ** 0.5).round
+front = CubeFace.new(Matrix.identity(3), "")
+first_point = CubePoint.new(cube_size, front, 0, 0)
+
+lines.each_with_index do |l, y|
+  l.chomp.chars.each_with_index do |c, x|
+    if c != ' '
+      map[[x, y]] = c
+      queue << [[x, y], first_point, []] if queue.empty?
+      n_points += 1
+    end
+  end
+  break if l.strip.empty?
+end
+x_min, x_max = map.keys.map(&:first).minmax
+y_min, y_max = map.keys.map(&:last).minmax
+
+# Debugging code
+# p front
+# p front.down
+# p front.down.left
+# p front.down.left.right
+# p first_point.key
+# p first_point.travel(0, 1).key
+# p first_point.travel(0, 1).travel(0, 1).key
+# p first_point.travel(0, 1).travel(0, 1).travel(0, 1).key
+# p first_point.travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1).key
+# # p first_point.travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1).key
+# p first_point.travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1)
+# p first_point.travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1).travel(-1, 0)
+# # exit
+
+visited = {}
+inverse_path = {}
+inverse = {}
+while !queue.empty?
+  (x, y), point, path = queue.shift
+  go = -> dx, dy {
+    nx, ny = x + dx, y + dy
+    return unless map[[nx, ny]]
+    return if visited[[nx, ny]]
+    n_point = point.travel(dx, dy)
+    visited[[nx, ny]] = n_point.key
+    # puts "[#{nx}, #{ny}] => #{n_point} => #{n_point.key}"
+    next_path = path + [" - #{nx},#{ny} => #{n_point.key}"]
+    if inverse[n_point.key]
+      raise "duplicate #{n_point.key} #{[nx, ny]} #{inverse[n_point.key]}\ncurrent path:\n#{next_path.join("\n")}\nprevious path:\n#{inverse_path[n_point.key].join("\n")}"
+    end
+    inverse[n_point.key] = [nx, ny]
+    inverse_path[n_point.key] = next_path
+    queue << [[nx, ny], n_point, next_path]
+  }
+  go[1, 0]
+  go[-1, 0]
+  go[0, 1]
+  go[0, -1]
+end
+
+# pp visited.sort_by { |k, v| [k[1], k[0]] }.to_h
+# p inverse[first_point.travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1).travel(0, 1).key]
+# exit
+
+passed = {}
+draw = -> {
+  (y_min..y_max).each do |y|
+    (x_min..x_max).each do |x|
+      c = map[[x, y]]
+      if c.nil?
+        print ' '
+      elsif passed[[x, y]]
+        print '@'
+      else
+        print c
+      end
+    end
+    puts
+  end
+  puts '======================='
+}
+
+path = lines.last.scan(/\d+|R|L/)
+facing = [1, 0]
+rotate_right = -> dx, dy { [-dy, dx] }
+current_point = first_point
+path.each do |v|
+  if v == 'R'
+    facing = rotate_right[*facing]
+  elsif v == 'L'
+    facing = rotate_right[*rotate_right[*rotate_right[*facing]]]
+  else
+    v.to_i.times do
+      next_point = current_point.travel(*facing)
+      char = map[inverse[next_point.key]]
+      if char == '#'
+        break
+      end
+      current_point = next_point
+      passed[inverse[current_point.key]] = true
+      # draw[]; sleep 0.1;
+    end
+    # draw[]; sleep 0.1;
+    # p [inverse[current_point.key], current_point]
+  end
+end
+
+here = inverse[current_point.key]
+forward = inverse[current_point.travel(*facing).key]
+backward = inverse[current_point.travel(*rotate_right[*rotate_right[*facing]]).key]
+row = here[1] + 1
+column = here[0] + 1
+facing = begin
+  if forward == [here[0] + 1, here[1]] || backward == [here[0] - 1, here[1]]
+    0
+  elsif forward == [here[0], here[1] + 1] || backward == [here[0], here[1] - 1]
+    1
+  elsif forward == [here[0] - 1, here[1]] || backward == [here[0] + 1, here[1]]
+    2
+  elsif forward == [here[0], here[1] - 1] || backward == [here[0], here[1] + 1]
+    3
+  end
+end
+p [row, column, facing]
+p 1000 * row + 4 * column + facing
+```
+
+## Day 23
+
+```ruby
+$elves = []
+$stdin.readlines.map(&:chomp).map(&:chars).each_with_index do |row, y|
+  row.each_with_index do |cell, x|
+    if cell == '#'
+      $elves << [x, y]
+    end
+  end
+end
+map_of = -> elves {
+  out = {}
+  elves.each do |x, y|
+    out[[x, y]] = true
+  end
+  out
+}
+draw = -> {
+  map = map_of[$elves]
+  (-5...10).each do |y|
+    (-5...10).each do |x|
+      if map[[x, y]]
+        print '#'
+      else
+        print '.'
+      end
+    end
+    puts
+  end
+  puts "---"
+}
+$scheme = [
+  # Up
+  [ [[-1, -1], [0, -1], [1, -1]], [0, -1] ],
+  # Down
+  [ [[-1, 1], [0, 1], [1, 1]], [0, 1] ],
+  # Left
+  [ [[-1, -1], [-1, 0], [-1, 1]], [-1, 0] ],
+  # Right
+  [ [[1, -1], [1, 0], [1, 1]], [1, 0] ]
+]
+$round = 0
+next_elves = -> elves {
+  map = map_of[elves]
+  proposals = {}
+  elves.each do |elf|
+    x, y = elf
+    adjacent = 0
+    (-1..1).each do |dx|
+      (-1..1).each do |dy|
+        if dx != 0 || dy != 0
+          adjacent += 1 if map[[x + dx, y + dy]]
+        end
+      end
+    end
+    next if adjacent == 0
+    proposal = nil
+    propose = -> ds, movement {
+      return if ds.any? { |dx, dy| map[[x + dx, y + dy]] }
+      return if proposal
+      proposal = movement
+      nx, ny = x + movement[0], y + movement[1]
+      proposals[[nx, ny]] ||= []
+      proposals[[nx, ny]] << elf
+    }
+    $scheme.rotate($round).each do |args|
+      propose[*args]
+    end
+  end
+  # p proposals
+  proposals.each do |destination, proposers|
+    if proposers.length == 1
+      map[destination] = true
+      map.delete(proposers[0])
+    end
+  end
+  $round += 1
+  map.keys
+}
+loop do
+  nround = next_elves[$elves]
+  if $round == 10
+    min_x, max_x = $elves.map(&:first).minmax
+    min_y, max_y = $elves.map(&:last).minmax
+    size = (max_x - min_x + 1) * (max_y - min_y + 1)
+    draw[]
+    puts "Part 1: #{size - $elves.length}"
+  end
+  if nround == $elves
+    puts "Part 2: #{$round}"
+    break
+  end
+  $elves = nround
+end
 ```
