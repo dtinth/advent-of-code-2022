@@ -9,6 +9,8 @@ I have in the repo `work.rb` and `input.txt`. I open the project in VS Code and 
 ```
       -------Part 1--------   -------Part 2--------
 Day       Time  Rank  Score       Time  Rank  Score
+ 25   00:21:18   828      0   00:21:24   699      0
+ 24   00:18:00    64     37   00:32:15   177      0
  23   00:16:47    44     57   00:18:46    35     66
  22   00:12:11    16     85   01:05:35    50     51
  21   00:03:40    58     43   00:46:38  1306      0
@@ -1998,4 +2000,245 @@ loop do
   end
   $elves = nround
 end
+```
+
+## Day 24
+
+```ruby
+# Part 1
+lines = $stdin.readlines.map(&:chomp)
+directions = {
+  '^' => [0, -1],
+  'v' => [0, 1],
+  '<' => [-1, 0],
+  '>' => [1, 0]
+}
+width = lines[0].length - 2
+height = lines.length - 2
+blizzards = []
+Blizzard = Struct.new(:x, :y, :direction)
+lines.each_with_index do |line, i|
+  line.chomp.chars.each_with_index do |char, j|
+    x, y = j - 1, i - 1
+    if i > 0 && i < lines.length - 1 && j > 0 && j < line.length - 1
+      if directions[char]
+        blizzards << Blizzard.new(x, y, directions[char])
+      end
+    end
+  end
+end
+cache = {}
+blizzards_at = -> t {
+  cache[t] ||= begin
+    blizzards.map do |blizzard|
+      x, y = blizzard.x + blizzard.direction[0] * t, blizzard.y + blizzard.direction[1] * t
+      x %= width
+      y %= height
+      [[x, y], true]
+    end.to_h
+  end
+}
+draw = -> m {
+  (0...height).each do |y|
+    (0...width).each do |x|
+      print m[[x, y]] ? '#' : '.'
+    end
+    puts
+  end
+}
+# A star
+start = [0, -1]
+goal = [width - 1, height]
+State = Struct.new(:pos, :t)
+fringe = [State.new(start, 0)]
+added = {}
+last_time = 0
+while !fringe.empty?
+  state = fringe.shift
+  if Time.now.to_f - last_time > 1.0
+    p [fringe.length, state]
+    last_time = Time.now.to_f
+  end
+  # p state
+  if state.pos == goal
+    p state.t
+    exit
+  end
+  try_go = -> dx, dy {
+    new_x, new_y = state.pos[0] + dx, state.pos[1] + dy
+    new_t = state.t + 1
+    key = [new_x, new_y, new_t]
+    new_pos = [new_x, new_y]
+    if new_pos == goal || new_pos == start || (new_x >= 0 && new_x < width && new_y >= 0 && new_y < height && !blizzards_at[new_t][new_pos])
+      if !added[key]
+        added[key] = true
+        fringe << State.new(new_pos, new_t)
+      end
+    end
+  }
+  try_go[0, -1]
+  try_go[0, 1]
+  try_go[-1, 0]
+  try_go[1, 0]
+  try_go[0, 0]
+  fringe.sort_by! { |s| s.t + (s.pos[0] - goal[0]).abs + (s.pos[1] - goal[1]).abs }
+end
+```
+
+```ruby
+# Part 2 animated visualization
+require 'paint'
+lines = $stdin.readlines.map(&:chomp)
+directions = {
+  '^' => [0, -1],
+  'v' => [0, 1],
+  '<' => [-1, 0],
+  '>' => [1, 0]
+}
+directions_inv = directions.invert
+width = lines[0].length - 2
+height = lines.length - 2
+blizzards = []
+Blizzard = Struct.new(:x, :y, :direction)
+lines.each_with_index do |line, i|
+  line.chomp.chars.each_with_index do |char, j|
+    x, y = j - 1, i - 1
+    if i > 0 && i < lines.length - 1 && j > 0 && j < line.length - 1
+      if directions[char]
+        blizzards << Blizzard.new(x, y, directions[char])
+      end
+    end
+  end
+end
+cache = {}
+blizzards_at = -> t {
+  cache[t] ||= begin
+    blizzards.map do |blizzard|
+      x, y = blizzard.x + blizzard.direction[0] * t, blizzard.y + blizzard.direction[1] * t
+      x %= width
+      y %= height
+      Blizzard.new(x, y, blizzard.direction)
+    end.group_by { |b| [b.x, b.y] }
+  end
+}
+100.times {puts}
+draw = -> m, actors = [] {
+  out = ""
+  groups = actors.group_by(&:pos)
+  (-1..height).each do |y|
+    (-1..width).each do |x|
+      wall = (x == -1 || x == width || y == -1 || y == height) && [x, y] != [0, -1] && [x, y] != [width - 1, height]
+      if wall
+        out << Paint[' ', :white, :white]
+      else
+        bs = m[[x, y]]
+        if !bs
+          if groups[[x, y]]
+            max_state = groups[[x, y]].map(&:state).max
+            out << Paint[' ', :white, max_state >= 2 ? :green : max_state == 1 ? :blue : :red]
+          else
+            out << '.'
+          end
+        elsif bs.length == 1
+          out << directions_inv[bs[0].direction]
+        elsif bs.length < 10
+          out << "#{bs.length}"
+        else
+          out << 'X'
+        end
+      end
+    end
+    out << "\n"
+  end
+  puts out
+}
+
+$start = start = [0, -1]
+$goal = goal = [width - 1, height]
+$width = width
+$height = height
+$hypot = Math.hypot(width, height).floor
+State = Struct.new(:pos, :t, :state) do
+  def finished?
+    pos == $goal && state >= 2
+  end
+  def target
+    if state == 1
+      $start
+    else
+      $goal
+    end
+  end
+  def heuristic
+    target = self.target
+    d = t + (pos[0] - target[0]).abs + (pos[1] - target[1]).abs
+    if state == 0
+      d += $hypot * 2
+    elsif state == 1
+      d += $hypot
+    end
+    d
+  end
+  def get_next_state_value(new_pos)
+    if new_pos == target
+      state + 1
+    else
+      state
+    end
+  end
+end
+
+states = [State.new(start, 0, 0)]
+print "\033[1;1H"
+p [states.first.t, states.length]
+draw[blizzards_at[0], states]
+sleep 5
+start_time = Time.now
+
+while true
+  next_states = []
+  added = {}
+  states.each do |state|
+    if state.finished?
+      puts state
+      exit
+    end
+    try_go = -> dx, dy {
+      new_x, new_y = state.pos[0] + dx, state.pos[1] + dy
+      new_t = state.t + 1
+      new_pos = [new_x, new_y]
+      new_state = state.get_next_state_value(new_pos)
+      key = [new_x, new_y, new_t, new_state]
+      if new_pos == goal || new_pos == start || (new_x >= 0 && new_x < width && new_y >= 0 && new_y < height && !blizzards_at[new_t][new_pos])
+        if !added[key]
+          added[key] = true
+          next_states << State.new(new_pos, new_t, new_state)
+        end
+      end
+    }
+    try_go[0, -1]
+    try_go[0, 1]
+    try_go[-1, 0]
+    try_go[1, 0]
+    try_go[0, 0]
+  end
+  next_states.sort_by!(&:heuristic)
+  next_states = next_states[0..100]
+  print "\033[1;1H"
+  p [next_states.first.t, next_states.length]
+  draw[blizzards_at[next_states.first.t], next_states]
+  states = next_states
+  sleep 0.033
+end
+```
+
+## Day 25
+
+```ruby
+snafu_to_decimal = -> s { s.chars.map { |x| '=-012'.index(x) - 2 }.inject(0) { |a, b| a * 5 + b } }
+p sum = $stdin.readlines.map(&:chomp).map(&snafu_to_decimal).sum
+p digits = sum.digits(5).reverse
+p z = (sum + [2].*(digits.length).inject(0) { |a, b| a * 5 + b }).digits(5).reverse
+p o = z.map { |x| '=-012'[x] }.join
+p snafu_to_decimal[o] == sum
 ```
